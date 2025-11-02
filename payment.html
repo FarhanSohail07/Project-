@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Event Payment | Theatron</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    body {
+      background: #000;
+      color: #fff;
+      font-family: "Poppins", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+    }
+    h2 { color: #ff4b4b; margin-bottom: 10px; }
+    p { color: #ccc; font-size: 15px; }
+  </style>
+</head>
+<body>
+  <h2>Processing Your Payment...</h2>
+  <p>Please wait — do not refresh or close this page.</p>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const event = params.get("event") || "Theatron Event";
+    const name = params.get("name");
+    const email = params.get("email");
+    const phone = params.get("phone");
+    const college = params.get("college");
+    const amount = params.get("amount") || "0";
+    const currency = params.get("currency") || "INR";
+    const receipt = params.get("receipt") || `${event}_${Date.now()}`;
+    const redirect = params.get("redirect") || "https://theatron-nu.vercel.app";
+
+    async function startPayment() {
+      try {
+        // Step 1: Create Razorpay order from your backend
+        const res = await fetch("https://theatron-backend.onrender.com/payment/get_order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: Number(amount), currency, receipt })
+        });
+
+        const order = await res.json();
+
+        // Step 2: Configure Razorpay checkout
+        const options = {
+          key: "rzp_live_RXQAxkawOc5Qfn", // ✅ Your live Razorpay key
+          amount: order.amount,
+          currency: order.currency,
+          name: `Theatron - ${event}`,
+          description: `Registration for ${event}`,
+          order_id: order.id,
+          prefill: { name, email, contact: phone },
+          theme: { color: "#ff4b4b" },
+
+          // Step 3: Success handler — redirect to Next.js success page
+          handler: function (response) {
+            const q = new URLSearchParams({
+              status: "success",
+              payment_id: response.razorpay_payment_id,
+              order_id: response.razorpay_order_id,
+              signature: response.razorpay_signature,
+              event, name, email, phone, college
+            }).toString();
+            window.location.href = `${redirect}?${q}`;
+          },
+
+          // Step 4: Handle cancel
+          modal: {
+            ondismiss: function () {
+              window.location.href = `${redirect}?status=cancelled&event=${event}`;
+            }
+          }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.open();
+      } catch (err) {
+        console.error("Payment error:", err);
+        window.location.href = `${redirect}?status=failed&event=${event}`;
+      }
+    }
+
+    startPayment();
+  </script>
+</body>
+</html>
