@@ -84,7 +84,7 @@ async function startPayment(){
           });
           console.log("🗂 Registration response:",await regRes.text());
 
-          document.querySelector("h2").innerText="Sending confirmation mail...";
+          document.querySelector("h2").innerText="You will receive a confirmation email shortly.";
           const mailRes=await fetch("https://theatron-backend.onrender.com/mail/send_mail",{
             method:"POST",
             headers:{"Content-Type":"application/json"},
