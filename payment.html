@@ -27,101 +27,101 @@
   <p>Please wait — do not refresh or close this page.</p>
 
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const event = params.get("event") || "Theatron Event";
-    const name = params.get("name");
-    const email = params.get("email");
-    const phone = params.get("phone");
-    const college = params.get("college");
-    const amount = params.get("amount") || "0";
-    const currency = params.get("currency") || "INR";
-    const receipt = params.get("receipt") || `${event}_${Date.now()}`;
-    const redirect = params.get("redirect") || "https://theatron-nu.vercel.app";
+const params=new URLSearchParams(window.location.search);
+const event=params.get("event")||"Theatron Event";
+const name=params.get("name");
+const email=params.get("email");
+const phone=params.get("phone");
+const college=params.get("college");
+const amount=params.get("amount")||"0";
+const currency=params.get("currency")||"INR";
+const receipt=params.get("receipt")||`${event}_${Date.now()}`;
+const redirect=params.get("redirect")||"https://theatron-nu.vercel.app";
 
-    async function startPayment() {
-      try {
-        // Step 1: Create Razorpay order
-        const res = await fetch("https://theatron-backend.onrender.com/payment/get_order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: Number(amount), currency, receipt })
-        });
-        const order = await res.json();
+async function startPayment(){
+  try{
+    console.log("➡️ Creating Razorpay order...");
+    const res=await fetch("https://theatron-backend.onrender.com/payment/get_order",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({amount:Number(amount),currency,receipt})
+    });
+    const order=await res.json();
+    console.log("✅ Order created:",order);
 
-        // Step 2: Configure Razorpay
-        const options = {
-          key: "rzp_live_RXQAxkawOc5Qfn",
-          amount: order.amount,
-          currency: order.currency,
-          name: `Theatron - ${event}`,
-          description: `Registration for ${event}`,
-          order_id: order.id,
-          prefill: { name, email, contact: phone },
-          theme: { color: "#ff4b4b" },
+    const options={
+      key:"rzp_live_RXQAxkawOc5Qfn",
+      amount:order.amount,
+      currency:order.currency,
+      name:`Theatron - ${event}`,
+      description:`Registration for ${event}`,
+      order_id:order.id,
+      prefill:{name,email,contact:phone},
+      theme:{color:"#ff4b4b"},
+      handler:async function(response){
+        console.log("💳 Payment success:",response);
+        try{
+          document.querySelector("h2").innerText="Verifying payment...";
+          const verifyRes=await fetch("https://theatron-backend.onrender.com/payment/verify_payment",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+              payment_id:response.razorpay_payment_id,
+              order_id:response.razorpay_order_id,
+              signature:response.razorpay_signature
+            })
+          });
+          const verifyText=await verifyRes.text();
+          console.log("🧾 Verify response:",verifyText);
 
-          handler: async function (response) {
-            try {
-              // Step 3a: Verify payment
-              const verifyRes = await fetch("https://theatron-backend.onrender.com/payment/verify_payment", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  payment_id: response.razorpay_payment_id,
-                  order_id: response.razorpay_order_id,
-                  signature: response.razorpay_signature
-                })
-              });
+          if(!verifyRes.ok) throw new Error("Verification failed");
 
-              const verifyText = await verifyRes.text();
-              console.log("✅ Verification result:", verifyText);
+          document.querySelector("h2").innerText="Registering you...";
+          const regRes=await fetch(`https://theatron-backend.onrender.com/register/solo/${event}`,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({name,email,phone,college})
+          });
+          console.log("🗂 Registration response:",await regRes.text());
 
-              if (!verifyRes.ok) throw new Error("Payment verification failed");
+          document.querySelector("h2").innerText="Sending confirmation mail...";
+          const mailRes=await fetch("https://theatron-backend.onrender.com/mail/send_mail",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({to:email})
+          });
+          console.log("📧 Mail response:",await mailRes.text());
 
-              // Step 3b: Fire registration + email in background (non-blocking)
-              fetch(`https://theatron-backend.onrender.com/register/solo/${event}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, email, phone, college })
-              }).catch(err => console.warn("Registration failed silently:", err));
-
-              fetch("https://theatron-backend.onrender.com/mail/send_mail", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ to: email })
-              }).catch(err => console.warn("Mail sending failed silently:", err));
-
-              // Step 3c: Redirect immediately
-              const q = new URLSearchParams({
-                status: "success",
-                payment_id: response.razorpay_payment_id,
-                order_id: response.razorpay_order_id,
-                event, name, email, phone, college
-              }).toString();
-              window.location.href = `${redirect}?${q}`;
-
-            } catch (err) {
-              console.error("❌ Verification or registration failed:", err);
-              window.location.href = `${redirect}?status=failed&event=${event}`;
-            }
-          },
-
-          modal: {
-            ondismiss: function () {
-              window.location.href = `${redirect}?status=cancelled&event=${event}`;
-            }
-          }
-        };
-
-        const rzp = new Razorpay(options);
-        rzp.open();
-
-      } catch (err) {
-        console.error("Payment error:", err);
-        window.location.href = `${redirect}?status=failed&event=${event}`;
+          // ✅ Finally redirect to success page
+          const q=new URLSearchParams({
+            status:"success",
+            payment_id:response.razorpay_payment_id,
+            order_id:response.razorpay_order_id,
+            event,name,email,phone,college
+          }).toString();
+          console.log("🚀 Redirecting to:",`${redirect}?${q}`);
+          window.location.href=`${redirect}?${q}`;
+        }catch(err){
+          console.error("❌ Error during verification/registration:",err);
+          window.location.href=`${redirect}?status=failed&event=${event}`;
+        }
+      },
+      modal:{
+        ondismiss:function(){
+          window.location.href=`${redirect}?status=cancelled&event=${event}`;
+        }
       }
-    }
+    };
 
-    startPayment();
-  </script>
+    const rzp=new Razorpay(options);
+    rzp.open();
+  }catch(err){
+    console.error("❌ Payment start error:",err);
+    window.location.href=`${redirect}?status=failed&event=${event}`;
+  }
+}
+
+startPayment();
+</script>
 </body>
 </html>
