@@ -63,7 +63,7 @@
           // Step 3: Success handler — redirect to Next.js success page
         handler: async function (response) {
   try {
-    // ✅ Step 1: Verify payment on backend
+    // Step 3a: Verify payment
     const verifyRes = await fetch("https://theatron-backend.onrender.com/payment/verify_payment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -74,22 +74,37 @@
       })
     });
 
+    const verifyText = await verifyRes.text();
+    console.log("Verification result:", verifyText);
+
     if (!verifyRes.ok) {
-      throw new Error("Verification failed");
+      throw new Error("Payment verification failed");
     }
 
-    // ✅ Step 2: Redirect to success page only after verification success
+    // Step 3b: Register user (after successful verification)
+    await fetch(`https://theatron-backend.onrender.com/register/solo/${event}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, phone, college })
+    });
+
+    // Step 3c: Send confirmation email
+    await fetch("https://theatron-backend.onrender.com/mail/send_mail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to: email })
+    });
+
+    // Step 3d: Redirect user to Next.js success page
     const q = new URLSearchParams({
       status: "success",
       payment_id: response.razorpay_payment_id,
       order_id: response.razorpay_order_id,
-      signature: response.razorpay_signature,
       event, name, email, phone, college
     }).toString();
-
     window.location.href = `${redirect}?${q}`;
   } catch (err) {
-    console.error("Verification failed:", err);
+    console.error("Verification or registration failed:", err);
     window.location.href = `${redirect}?status=failed&event=${event}`;
   }
 },
