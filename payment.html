@@ -61,32 +61,38 @@
           theme: { color: "#ff4b4b" },
 
           // Step 3: Success handler — redirect to Next.js success page
-         handler: async function (response) {
+        handler: async function (response) {
   try {
-    // Step 1: Verify and store registration in backend
-    await fetch("https://theatron-backend.onrender.com/payment/verify_payment", {
+    // ✅ Step 1: Verify payment on backend
+    const verifyRes = await fetch("https://theatron-backend.onrender.com/payment/verify_payment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         payment_id: response.razorpay_payment_id,
         order_id: response.razorpay_order_id,
-        signature: response.razorpay_signature,
-        event, name, email, phone, college
+        signature: response.razorpay_signature
       })
     });
 
-    // Step 2: Redirect after backend confirms
+    if (!verifyRes.ok) {
+      throw new Error("Verification failed");
+    }
+
+    // ✅ Step 2: Redirect to success page only after verification success
     const q = new URLSearchParams({
       status: "success",
-      event, name, email
+      payment_id: response.razorpay_payment_id,
+      order_id: response.razorpay_order_id,
+      signature: response.razorpay_signature,
+      event, name, email, phone, college
     }).toString();
+
     window.location.href = `${redirect}?${q}`;
   } catch (err) {
-    console.error("Verify failed:", err);
+    console.error("Verification failed:", err);
     window.location.href = `${redirect}?status=failed&event=${event}`;
   }
 },
-
 
           // Step 4: Handle cancel
           modal: {
