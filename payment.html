@@ -87,7 +87,9 @@ async function startPayment(){
           const regRes=await fetch(`https://theatron-backend.onrender.com/register/solo/${event}`,{
             method:"POST",
             headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({name,email,phone,college})
+            body:JSON.stringify({name,email,phone,college,payment_id:response.razorpay_payment_id,
+              order_id:response.razorpay_order_id,
+              signature:response.razorpay_signature,})
           });
           console.log("🗂 Registration response:",await regRes.text());
           
