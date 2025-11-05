@@ -68,7 +68,12 @@ async function startPayment(){
             body:JSON.stringify({
               payment_id:response.razorpay_payment_id,
               order_id:response.razorpay_order_id,
-              signature:response.razorpay_signature
+              signature:response.razorpay_signature,
+              name:name,
+              email:email,
+              phone:phone,
+              college:college,
+              event:event
             })
           });
           const verifyText=await verifyRes.text();
