@@ -82,12 +82,47 @@ async function startPayment(){
           if(!verifyRes.ok) throw new Error("Verification failed");
 
           document.querySelector("h2").innerText="Registering you...";
+          if( event ==='AdaptTune'){
+            const Team_name = params.get('teamName');
+            const participant1 = params.get('participant1');
+            const college1 =params.get('college1');
+            const participant2 = params.get('participant2');
+            const college2 =params.get('college2');
+            const phone = params.get('phone');
+            const email = params.get('email');
+            const ammount = params.get('amount');
+            const regRes = await fetch(`https://theatron-backend.onrender.com/register/group/${event}`,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({Team_name,participant1,participant2,email,phone,college1,college2})
+          });
+          console.log("🗂 Registration response:",await regRes.text());
+         }
+          else if (event ==='Quizcorn'){
+            const Team_name = params.get('teamName');
+            const participant1 = params.get('participant1');
+            const college1 =params.get('college1');
+            const participant2 = params.get('participant2');
+            const college2 =params.get('college2');
+            const participant3 = params.get('participant3');
+            const college3 =params.get('college3');
+            const phone = params.get('phone');
+            const email = params.get('email');
+            const regRes = await fetch(`https://theatron-backend.onrender.com/register/group/${event}`,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({Team_name,participant1,participant2,participant3,email,phone,college1,college2,college3})
+          });
+          console.log("🗂 Registration response:",await regRes.text());
+         }
+          else {  
           const regRes=await fetch(`https://theatron-backend.onrender.com/register/solo/${event}`,{
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({name,email,phone,college})
           });
           console.log("🗂 Registration response:",await regRes.text());
+          }
 
           document.querySelector("h2").innerText="You will receive a confirmation email shortly.";
           const mailRes=await fetch("https://theatron-backend.onrender.com/mail/send_mail",{
