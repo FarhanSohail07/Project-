@@ -28,7 +28,7 @@
 
   <script>
 const params=new URLSearchParams(window.location.search);
-const event=params.get("event")||"Theatron Event";
+const event=params.get("event");
 const name=params.get("name");
 const email=params.get("email");
 const phone=params.get("phone");
@@ -44,7 +44,7 @@ async function startPayment(){
     const res=await fetch("https://theatron-backend.onrender.com/payment/get_order",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({amount:Number(amount),currency,receipt})
+      body:JSON.stringify({amount:Number(amount),currency,receipt,event})
     });
     const order=await res.json();
     console.log("✅ Order created:",order);
